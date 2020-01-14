@@ -1,0 +1,3 @@
+.less_wrap {
+  color: red;
+}

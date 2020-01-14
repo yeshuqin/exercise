@@ -1,6 +1,39 @@
 const  PENDING = 'PENDING'
 const FULFILLED = 'FULFILLED'
 const REJECTED = 'REJECTED'
+
+//promise处理函数
+const resolvePromise = (promise2, x, resolve, reject) => {
+    //处理x的类型 来决定是调用resolve还是reject
+    //必须要写的很严谨
+    if(promise2 === x) { //自己等待自己完成
+        return reject(new TypeError('Chaining cycle detected for promise #<Promise>'))
+    }
+    //判断x是不是一个普通值 先认为你是个promise
+    if((typeof x === 'object' && x!==null) || typeof x === 'function') {
+        //可能是promise
+        try{
+            let then = x.then //看一看有没then方法
+            if(typeof then === 'function') {
+                //是promise
+                then.call(x,y => {
+                    // resolve(y)
+                    //y可能还是个promise 实现递归解析
+                    resolvePromise(promise2, y, resolve, reject)
+                },r => {
+                    reject(r)
+                })
+            }else {
+                resolve(x) //常量直接跑出去即可
+            }
+        }catch(e) {
+            reject(e) //取then抛出异常就报错
+        }
+    }else {
+        //不是promise
+        resolve(x)
+    }
+}
 class Promise {
     constructor(executor) {
         //创建promise executor会立即执行
@@ -38,37 +71,45 @@ class Promise {
         let promise2 = new Promise((resolve, reject) => {
             //应该在返回的promise中 取到上一次的状态 来决定这个Promise2是成功还是失败
             if(this.status === FULFILLED) {
-                try{ //将then中的方法执行 拿到他的返回值
-                    let x = onFulfilled(this.value) 
-                    resolve(x) //将结果传递到resolve方法中
-                }catch(e) {
-                    reject(e)
-                }
-            }
-            if(this.status === REJECTED) {
-                try{
-                    let x = onRejected(this.reason)
-                    resolve(x)
-                }catch(e) {
-                    reject(e)
-                }
-            }
-            if(this.status === PENDING) {
-                this.onResolvedCallbacks.push(() => {
-                    try{
-                        let x = onFulfilled(this.value)
-                        resolve(x)
+                setTimeout(() => {
+                    try{ //将then中的方法执行 拿到他的返回值
+                        let x = onFulfilled(this.value) 
+                        resolvePromise(promise2, x, resolve, reject) //将结果传递到resolve方法中
                     }catch(e) {
                         reject(e)
                     }
                 })
-                this.onRejectedCallbacks.push(() => {
+            }
+            if(this.status === REJECTED) {
+                setTimeout(() => {
                     try{
                         let x = onRejected(this.reason)
-                        resolve(x)
+                        resolvePromise(promise2, x, resolve, reject)
                     }catch(e) {
                         reject(e)
                     }
+                })
+            }
+            if(this.status === PENDING) {
+                this.onResolvedCallbacks.push(() => {
+                    setTimeout(() => {
+                        try{
+                            let x = onFulfilled(this.value)
+                            resolvePromise(promise2, x, resolve, reject)
+                        }catch(e) {
+                            reject(e)
+                        }
+                    })
+                })
+                this.onRejectedCallbacks.push(() => {
+                    setTimeout(() => {
+                        try{
+                            let x = onRejected(this.reason)
+                            resolvePromise(promise2, x, resolve, reject)
+                        }catch(e) {
+                            reject(e)
+                        }
+                    })
                 })
             }
         })
