@@ -1,3 +1,9 @@
+function ReactElement(type, props) {
+    const element = {type, props} 
+    return element
+}
+
+
 function createElement(type, config = {}, children) {
     let propName;
     const props = {};
@@ -8,6 +14,10 @@ function createElement(type, config = {}, children) {
     if(childrenLength === 1) {
         props.children = children
     }else if(childrenLength>1) {
-        props.children = Aa
+        props.children = Array.from(arguments).slice(2);
     }
+    console.log(type,props)
+    return ReactElement(type, props)
 }
+
+export default {createElement}
